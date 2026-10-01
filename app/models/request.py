@@ -1,0 +1,26 @@
+from datetime import date, datetime
+
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text, func
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.db import Base
+from app.models.constants import REQUEST_STATUSES, sql_in
+
+
+class DatasetRequest(Base):
+    __tablename__ = "requests"
+    __table_args__ = (
+        CheckConstraint(sql_in("status", REQUEST_STATUSES), name="status_valid"),
+        CheckConstraint("episodes_requested > 0", name="episodes_requested_positive"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    task_name: Mapped[str] = mapped_column(String(200))
+    episodes_requested: Mapped[int]
+    deadline: Mapped[date]
+    notes: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), server_default="submitted")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
