@@ -20,6 +20,8 @@ services:
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin123}
       SEED_OPERATOR_PASSWORD: ${SEED_OPERATOR_PASSWORD:-ops123}
       SEED_CLIENT_PASSWORD: ${SEED_CLIENT_PASSWORD:-client123}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      SESSION_HTTPS_ONLY: ${SESSION_HTTPS_ONLY:-false}
     depends_on:
       db:
         condition: service_healthy

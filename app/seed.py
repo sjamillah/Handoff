@@ -2,12 +2,12 @@
 
 import os
 
-from argon2 import PasswordHasher
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 
 from app.db import SessionLocal
 from app.models import Organisation, User
+from app.security import hash_password
 
 ORGANISATIONS = ["Acme Robotics", "Beta Labs"]
 
@@ -27,14 +27,13 @@ def seed(session):
         )
     org_ids = dict(session.execute(select(Organisation.name, Organisation.id)).all())
 
-    hasher = PasswordHasher()
     created = 0
     for email, password_var, role, org_name in USERS:
         result = session.execute(
             insert(User)
             .values(
                 email=email,
-                password_hash=hasher.hash(os.environ[password_var]),
+                password_hash=hash_password(os.environ[password_var]),
                 role=role,
                 organisation_id=org_ids[org_name] if org_name else None,
             )
