@@ -22,6 +22,7 @@ services:
       SEED_CLIENT_PASSWORD: ${SEED_CLIENT_PASSWORD:-client123}
       SESSION_SECRET: ${SESSION_SECRET:-}
       SESSION_HTTPS_ONLY: ${SESSION_HTTPS_ONLY:-false}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Africa/Kigali}
     depends_on:
       db:
         condition: service_healthy
