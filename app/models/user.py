@@ -1,10 +1,11 @@
 from datetime import datetime
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, func, true
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
 from app.models.constants import ROLES, sql_in
+from app.models.organisation import Organisation
 
 
 class User(Base):
@@ -26,3 +27,9 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+    organisation: Mapped[Organisation | None] = relationship()
+
+    @property
+    def organisation_name(self):
+        return self.organisation.name if self.organisation else None
