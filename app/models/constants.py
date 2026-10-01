@@ -1,10 +1,22 @@
+"""Allowed values for roles, episode quality, request status and robots."""
+
+from collections.abc import Iterable
+
 ROLES = ("client", "operator", "admin")
 QUALITIES = ("good", "usable", "bad")
 REQUEST_STATUSES = ("submitted", "in_progress", "delivered", "accepted", "rejected")
 KNOWN_ROBOTS = ("arm-01", "arm-02", "arm-03", "mobile-01", "humanoid-01")
 
 
-def sql_in(column, values):
-    """Turns ("good", "bad") into "quality IN ('good', 'bad')" for a CHECK constraint."""
+def sql_in(column: str, values: Iterable[str]) -> str:
+    """Build a SQL ``IN`` expression for a CHECK constraint.
+
+    Args:
+        column: Column name.
+        values: Allowed values. Must be trusted constants, never user input.
+
+    Returns:
+        An expression such as ``quality IN ('good', 'bad')``.
+    """
     quoted = ", ".join(f"'{value}'" for value in values)
     return f"{column} IN ({quoted})"

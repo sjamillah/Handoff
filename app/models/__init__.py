@@ -1,3 +1,9 @@
+"""Database models.
+
+Importing this package registers every table on ``Base.metadata``, which
+Alembic autogenerate requires.
+"""
+
 from app.models.assignment import Assignment
 from app.models.episode import Episode
 from app.models.organisation import Organisation

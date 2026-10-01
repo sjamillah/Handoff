@@ -1,49 +1,70 @@
-from typing import Literal
+"""Pydantic request and response models. Descriptions and examples appear in Swagger and ReDoc."""
+
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 Role = Literal["client", "operator", "admin"]
 
 
-def check_client_organisation(role, organisation):
-    if role == "client" and not organisation:
-        raise ValueError("a client must have an organisation")
-    if role != "client" and organisation:
-        raise ValueError("only clients can have an organisation")
+class ErrorOut(BaseModel):
+    """Error response body."""
+
+    detail: str = Field(examples=["Not allowed"])
 
 
 class LoginIn(BaseModel):
-    email: str
-    password: str
+    """Login credentials. The email is matched case-insensitively."""
+
+    email: str = Field(examples=["client-a@example.com"])
+    password: str = Field(examples=["client123"])
 
 
-class UserCreate(BaseModel):
-    email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
-    role: Role
-    organisation: str | None = None
+class RoleWithOrganisation(BaseModel):
+    """Role and, for clients, the organisation name.
+
+    Shared by ``UserCreate`` and ``RoleChange``. Mirrors the
+    ``client_has_organisation`` database constraint, so invalid input is
+    rejected with a 422 before it reaches the database.
+    """
+
+    role: Role = Field(examples=["client"])
+    organisation: str | None = Field(
+        default=None,
+        description=(
+            "Name of an existing organisation. Required for clients, not allowed for other roles."
+        ),
+        examples=["Acme Robotics"],
+    )
 
     @model_validator(mode="after")
-    def organisation_matches_role(self):
-        check_client_organisation(self.role, self.organisation)
+    def organisation_matches_role(self) -> Self:
+        """Require an organisation for clients and reject one for other roles."""
+        if self.role == "client" and not self.organisation:
+            raise ValueError("a client must have an organisation")
+        if self.role != "client" and self.organisation:
+            raise ValueError("only clients can have an organisation")
         return self
 
 
-class RoleChange(BaseModel):
-    role: Role
-    organisation: str | None = None
+class UserCreate(RoleWithOrganisation):
+    """Body for creating a user."""
 
-    @model_validator(mode="after")
-    def organisation_matches_role(self):
-        check_client_organisation(self.role, self.organisation)
-        return self
+    email: EmailStr = Field(examples=["new.client@example.com"])
+    password: str = Field(min_length=8, max_length=128, examples=["a-long-password"])
+
+
+class RoleChange(RoleWithOrganisation):
+    """Body for changing a user's role. A non-client role clears the organisation."""
 
 
 class UserOut(BaseModel):
+    """User as returned by the API. Never includes the password hash."""
+
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
-    email: str
-    role: Role
-    organisation_name: str | None
-    is_active: bool
+    id: int = Field(examples=[4])
+    email: str = Field(examples=["client-a@example.com"])
+    role: Role = Field(examples=["client"])
+    organisation_name: str | None = Field(examples=["Acme Robotics"])
+    is_active: bool = Field(examples=[True])

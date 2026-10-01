@@ -1,3 +1,5 @@
+"""Episode model."""
+
 from datetime import datetime
 
 from sqlalchemy import CheckConstraint, DateTime, Index, String
@@ -8,6 +10,13 @@ from app.models.constants import KNOWN_ROBOTS, QUALITIES, sql_in
 
 
 class Episode(Base):
+    """Recorded robot episode, imported from the CSV export.
+
+    ``episode_id`` is the identifier from the CSV. It is unique, which makes
+    repeated imports idempotent. ``recorded_at`` and (``task_name``,
+    ``quality``) are indexed for the analytics queries.
+    """
+
     __tablename__ = "episodes"
     __table_args__ = (
         CheckConstraint(sql_in("quality", QUALITIES), name="quality_valid"),

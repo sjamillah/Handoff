@@ -1,3 +1,5 @@
+"""Dataset request model."""
+
 from datetime import date, datetime
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text, func
@@ -8,6 +10,13 @@ from app.models.constants import REQUEST_STATUSES, sql_in
 
 
 class DatasetRequest(Base):
+    """Client request for a number of episodes of one task.
+
+    Named ``DatasetRequest`` to avoid a clash with ``fastapi.Request``. The
+    database restricts ``status`` to known values. Allowed transitions between
+    statuses are enforced in the service layer.
+    """
+
     __tablename__ = "requests"
     __table_args__ = (
         CheckConstraint(sql_in("status", REQUEST_STATUSES), name="status_valid"),
@@ -21,6 +30,4 @@ class DatasetRequest(Base):
     deadline: Mapped[date]
     notes: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(20), server_default="submitted")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

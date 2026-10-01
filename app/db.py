@@ -1,3 +1,9 @@
+"""Database engine, session factory and declarative base.
+
+Connections use the UTC time zone, so timestamps are returned in UTC
+regardless of the server configuration.
+"""
+
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
@@ -13,6 +19,12 @@ NAMING_CONVENTION = {
 
 
 class Base(DeclarativeBase):
+    """Declarative base for all models.
+
+    Applies a naming convention that gives every constraint a deterministic
+    name, for example ``ck_users_role_valid``.
+    """
+
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 

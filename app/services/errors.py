@@ -1,13 +1,17 @@
-"""Service errors. main.py turns them into 404, 409 and 400 responses."""
+"""Exceptions raised by the service layer.
+
+Services raise these instead of ``HTTPException``, so they can be used and
+tested without HTTP. ``app.main`` maps each one to a status code.
+"""
 
 
 class NotFoundError(Exception):
-    pass
+    """Requested object does not exist or is not visible to the user. Mapped to 404."""
 
 
 class ConflictError(Exception):
-    pass
+    """Change conflicts with existing data, such as a duplicate email. Mapped to 409."""
 
 
 class RuleError(Exception):
-    """Valid input that breaks a business rule, like an admin deactivating themselves."""
+    """Input is valid but breaks a business rule. Mapped to 400."""

@@ -1,4 +1,13 @@
-from fastapi import Depends, FastAPI
+"""FastAPI application: session middleware, routers and error handlers.
+
+Only the health and login routers are public. All other routers are
+included with ``get_current_user``, so new routes require authentication
+by default.
+"""
+
+from collections.abc import Callable
+
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -7,7 +16,14 @@ from app.deps import get_current_user
 from app.routers import admin, auth, demo, health
 from app.services.errors import ConflictError, NotFoundError, RuleError
 
-app = FastAPI(title="Dataset Request Desk")
+DESCRIPTION = """
+Internal API for requesting and delivering datasets of recorded robot episodes.
+
+Authentication uses a session cookie, set by `POST /auth/login`. Browsers send
+the cookie automatically on later requests, including requests made from this page.
+"""
+
+app = FastAPI(title="Dataset Request Desk", version="0.1.0", description=DESCRIPTION)
 
 app.add_middleware(
     SessionMiddleware,
@@ -24,8 +40,17 @@ for router in (auth.router, admin.router, demo.router):
     app.include_router(router, dependencies=[Depends(get_current_user)])
 
 
-def error_handler(status_code):
-    def handle(request, exc):
+def error_handler(status_code: int) -> Callable[[Request, Exception], JSONResponse]:
+    """Create an exception handler that returns the exception message.
+
+    Args:
+        status_code: HTTP status code of the response.
+
+    Returns:
+        A handler that responds with ``{"detail": <message>}``.
+    """
+
+    def handle(request: Request, exc: Exception) -> JSONResponse:
         return JSONResponse(status_code=status_code, content={"detail": str(exc)})
 
     return handle

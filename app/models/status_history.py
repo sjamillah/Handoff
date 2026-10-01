@@ -1,3 +1,5 @@
+"""Status history model."""
+
 from datetime import datetime
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, func
@@ -8,6 +10,12 @@ from app.models.constants import REQUEST_STATUSES, sql_in
 
 
 class StatusHistory(Base):
+    """Record of one status change on a request, with the user and time.
+
+    ``from_status`` is NULL on the first row, written when the request is
+    created. These rows are the source for time from submitted to delivered.
+    """
+
     __tablename__ = "status_history"
     __table_args__ = (
         CheckConstraint(
@@ -22,6 +30,4 @@ class StatusHistory(Base):
     from_status: Mapped[str | None] = mapped_column(String(20))
     to_status: Mapped[str] = mapped_column(String(20))
     changed_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    changed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
