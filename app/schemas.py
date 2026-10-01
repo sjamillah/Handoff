@@ -1,10 +1,12 @@
 """Pydantic request and response models. Descriptions and examples appear in Swagger and ReDoc."""
 
+from datetime import UTC, date, datetime
 from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 Role = Literal["client", "operator", "admin"]
+RequestStatus = Literal["submitted", "in_progress", "delivered", "accepted", "rejected"]
 
 
 class ErrorOut(BaseModel):
@@ -106,3 +108,80 @@ class ImportReport(BaseModel):
             self.conflicts += 1
         else:
             self.rejected += 1
+
+
+class RequestCreate(BaseModel):
+    """Body for creating a dataset request."""
+
+    task_name: str = Field(
+        min_length=1,
+        max_length=200,
+        description="Task to collect. Stored trimmed and lower-cased, like imported episodes.",
+        examples=["pick cup"],
+    )
+    episodes_requested: int = Field(gt=0, le=100_000, examples=[50])
+    deadline: date = Field(description="Delivery date. Today or later.", examples=["2026-12-01"])
+    notes: str | None = Field(default=None, max_length=2000, examples=["Daylight recordings only."])
+
+    @field_validator("task_name")
+    @classmethod
+    def normalise_task_name(cls, value: str) -> str:
+        """Trim and lower-case the task name and reject one that is only whitespace."""
+        value = value.strip().lower()
+        if not value:
+            raise ValueError("task_name is blank")
+        return value
+
+    @field_validator("deadline")
+    @classmethod
+    def deadline_not_in_past(cls, value: date) -> date:
+        """Reject a deadline before today's date in UTC."""
+        if value < datetime.now(UTC).date():
+            raise ValueError("deadline is in the past")
+        return value
+
+    @field_validator("notes")
+    @classmethod
+    def blank_notes_to_none(cls, value: str | None) -> str | None:
+        """Trim notes and store empty notes as None."""
+        value = value.strip() if value else None
+        return value or None
+
+
+class StatusChangeIn(BaseModel):
+    """Body for moving a request to another status."""
+
+    to_status: RequestStatus = Field(examples=["in_progress"])
+
+
+class StatusChangeOut(BaseModel):
+    """One entry in a request's status history."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    from_status: RequestStatus | None = Field(examples=["submitted"])
+    to_status: RequestStatus = Field(examples=["in_progress"])
+    changed_by_id: int = Field(examples=[2])
+    changed_by_name: str = Field(examples=["Olu Operator"])
+    changed_at: datetime
+
+
+class RequestOut(BaseModel):
+    """Dataset request as returned in lists."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(examples=[1])
+    client_id: int = Field(examples=[4])
+    task_name: str = Field(examples=["pick cup"])
+    episodes_requested: int = Field(examples=[50])
+    deadline: date
+    notes: str | None = Field(examples=["Daylight recordings only."])
+    status: RequestStatus = Field(examples=["submitted"])
+    created_at: datetime
+
+
+class RequestDetail(RequestOut):
+    """Dataset request with its full status history, oldest first."""
+
+    history: list[StatusChangeOut]

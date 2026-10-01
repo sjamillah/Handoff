@@ -1,12 +1,16 @@
 """Dataset request model."""
 
 from datetime import date, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
 from app.models.constants import REQUEST_STATUSES, sql_in
+
+if TYPE_CHECKING:
+    from app.models.status_history import StatusHistory
 
 
 class DatasetRequest(Base):
@@ -31,3 +35,5 @@ class DatasetRequest(Base):
     notes: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(20), server_default="submitted")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    history: Mapped[list["StatusHistory"]] = relationship(order_by="StatusHistory.id")

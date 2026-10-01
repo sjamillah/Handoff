@@ -3,10 +3,11 @@
 from datetime import datetime
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
 from app.models.constants import REQUEST_STATUSES, sql_in
+from app.models.user import User
 
 
 class StatusHistory(Base):
@@ -31,3 +32,10 @@ class StatusHistory(Base):
     to_status: Mapped[str] = mapped_column(String(20))
     changed_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    changed_by: Mapped[User] = relationship()
+
+    @property
+    def changed_by_name(self) -> str:
+        """Name of the user who made the change."""
+        return self.changed_by.name
