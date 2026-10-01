@@ -1,1 +1,1 @@
-"""Dataset Request Desk API."""
+"""Handoff, the Dataset Request Desk API."""

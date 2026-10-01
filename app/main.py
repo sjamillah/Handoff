@@ -17,13 +17,14 @@ from app.routers import admin, auth, demo, health
 from app.services.errors import ConflictError, NotFoundError, RuleError
 
 DESCRIPTION = """
-Internal API for requesting and delivering datasets of recorded robot episodes.
+Handoff is the Dataset Request Desk: an internal API for requesting and delivering
+datasets of recorded robot episodes.
 
 Authentication uses a session cookie, set by `POST /auth/login`. Browsers send
 the cookie automatically on later requests, including requests made from this page.
 """
 
-app = FastAPI(title="Dataset Request Desk", version="0.1.0", description=DESCRIPTION)
+app = FastAPI(title="Handoff", version="0.1.0", description=DESCRIPTION)
 
 app.add_middleware(
     SessionMiddleware,

@@ -2,9 +2,9 @@ services:
   db:
     image: postgres:17
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-desk}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-desk}
-      POSTGRES_DB: ${POSTGRES_DB:-desk}
+      POSTGRES_USER: ${POSTGRES_USER:-handoff}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-handoff}
+      POSTGRES_DB: ${POSTGRES_DB:-handoff}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -16,7 +16,7 @@ services:
   api:
     build: .
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-desk}:${POSTGRES_PASSWORD:-desk}@db:5432/${POSTGRES_DB:-desk}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-handoff}:${POSTGRES_PASSWORD:-handoff}@db:5432/${POSTGRES_DB:-handoff}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin123}
       SEED_OPERATOR_PASSWORD: ${SEED_OPERATOR_PASSWORD:-ops123}
       SEED_CLIENT_PASSWORD: ${SEED_CLIENT_PASSWORD:-client123}

@@ -1,5 +1,5 @@
 [project]
-name = "dataset-request-desk"
+name = "handoff"
 version = "0.1.0"
 description = "Internal platform for requesting and delivering robot episode datasets."
 requires-python = ">=3.12"
