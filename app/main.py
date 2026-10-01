@@ -8,6 +8,7 @@ by default.
 from collections.abc import Callable
 
 from fastapi import Depends, FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -57,6 +58,17 @@ def error_handler(status_code: int) -> Callable[[Request, Exception], JSONRespon
     return handle
 
 
+def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """Return 422 with the location, message and type of each error, never the input.
+
+    FastAPI's default response echoes the submitted values, which would send
+    passwords back in the response and into any log that records it.
+    """
+    errors = [{"loc": e["loc"], "msg": e["msg"], "type": e["type"]} for e in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": errors})
+
+
+app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(NotFoundError, error_handler(404))
 app.add_exception_handler(PermissionDeniedError, error_handler(403))
 app.add_exception_handler(ConflictError, error_handler(409))
