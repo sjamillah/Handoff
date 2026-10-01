@@ -80,6 +80,7 @@ def create_user(db: Session, data: UserCreate) -> User:
     """
     user = User(
         email=normalise_email(data.email),
+        name=data.name.strip(),
         password_hash=hash_password(data.password),
         role=data.role,
         organisation_id=find_organisation_id(db, data.organisation),

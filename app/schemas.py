@@ -51,6 +51,7 @@ class UserCreate(RoleWithOrganisation):
     """Body for creating a user."""
 
     email: EmailStr = Field(examples=["new.client@example.com"])
+    name: str = Field(min_length=1, max_length=200, examples=["Nadia Client"])
     password: str = Field(min_length=8, max_length=128, examples=["a-long-password"])
 
 
@@ -65,6 +66,7 @@ class UserOut(BaseModel):
 
     id: int = Field(examples=[4])
     email: str = Field(examples=["client-a@example.com"])
+    name: str = Field(examples=["Acme Robotics"])
     role: Role = Field(examples=["client"])
     organisation_name: str | None = Field(examples=["Acme Robotics"])
     is_active: bool = Field(examples=[True])

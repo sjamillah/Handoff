@@ -1,4 +1,4 @@
-"""Seed the demo organisations and users defined in the brief.
+"""Seed the demo organisations and users defined in the brief (seed/users.json).
 
 Run with ``python -m app.seed``. Existing rows are skipped and never
 updated, so the script is safe to run on every start and does not
@@ -21,6 +21,7 @@ class SeedUser(NamedTuple):
     """Demo user definition. The password is read from ``password_env_var``."""
 
     email: str
+    name: str
     password_env_var: str
     role: str
     organisation: str | None
@@ -29,11 +30,13 @@ class SeedUser(NamedTuple):
 ORGANISATIONS = ["Acme Robotics", "Beta Labs"]
 
 USERS = [
-    SeedUser("admin@example.com", "SEED_ADMIN_PASSWORD", "admin", None),
-    SeedUser("ops1@example.com", "SEED_OPERATOR_PASSWORD", "operator", None),
-    SeedUser("ops2@example.com", "SEED_OPERATOR_PASSWORD", "operator", None),
-    SeedUser("client-a@example.com", "SEED_CLIENT_PASSWORD", "client", "Acme Robotics"),
-    SeedUser("client-b@example.com", "SEED_CLIENT_PASSWORD", "client", "Beta Labs"),
+    SeedUser("admin@example.com", "Ada Admin", "SEED_ADMIN_PASSWORD", "admin", None),
+    SeedUser("ops1@example.com", "Olu Operator", "SEED_OPERATOR_PASSWORD", "operator", None),
+    SeedUser("ops2@example.com", "Odile Operator", "SEED_OPERATOR_PASSWORD", "operator", None),
+    SeedUser(
+        "client-a@example.com", "Acme Robotics", "SEED_CLIENT_PASSWORD", "client", "Acme Robotics"
+    ),
+    SeedUser("client-b@example.com", "Beta Labs", "SEED_CLIENT_PASSWORD", "client", "Beta Labs"),
 ]
 
 
@@ -61,6 +64,7 @@ def seed(session: Session) -> int:
             insert(User)
             .values(
                 email=user.email,
+                name=user.name,
                 password_hash=hash_password(os.environ[user.password_env_var]),
                 role=user.role,
                 organisation_id=org_ids[user.organisation] if user.organisation else None,
