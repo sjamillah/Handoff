@@ -1,0 +1,20 @@
+[project]
+name = "dataset-request-desk"
+version = "0.1.0"
+description = "Internal platform for requesting and delivering robot episode datasets."
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "D", "ANN"]
+ignore = ["D104"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"migrations/env.py" = ["F401"]
