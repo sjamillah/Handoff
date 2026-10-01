@@ -13,7 +13,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app import config
 from app.deps import get_current_user
-from app.routers import admin, auth, demo, health
+from app.routers import admin, auth, demo, episodes, health
 from app.services.errors import ConflictError, NotFoundError, RuleError
 
 DESCRIPTION = """
@@ -37,7 +37,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(auth.public_router)
 
-for router in (auth.router, admin.router, demo.router):
+for router in (auth.router, admin.router, episodes.router, demo.router):
     app.include_router(router, dependencies=[Depends(get_current_user)])
 
 
