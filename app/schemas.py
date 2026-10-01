@@ -1,9 +1,11 @@
 """Pydantic request and response models. Descriptions and examples appear in Swagger and ReDoc."""
 
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+
+from app import config
 
 Role = Literal["client", "operator", "admin"]
 RequestStatus = Literal["submitted", "in_progress", "delivered", "accepted", "rejected"]
@@ -18,8 +20,8 @@ class ErrorOut(BaseModel):
 class LoginIn(BaseModel):
     """Login credentials. The email is matched case-insensitively."""
 
-    email: str = Field(examples=["client-a@example.com"])
-    password: str = Field(examples=["client123"])
+    email: str = Field(examples=["user@example.com"])
+    password: str = Field(examples=["your-password"])
 
 
 class RoleWithOrganisation(BaseModel):
@@ -67,7 +69,7 @@ class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int = Field(examples=[4])
-    email: str = Field(examples=["client-a@example.com"])
+    email: str = Field(examples=["user@example.com"])
     name: str = Field(examples=["Acme Robotics"])
     role: Role = Field(examples=["client"])
     organisation_name: str | None = Field(examples=["Acme Robotics"])
@@ -120,7 +122,10 @@ class RequestCreate(BaseModel):
         examples=["pick cup"],
     )
     episodes_requested: int = Field(gt=0, le=100_000, examples=[50])
-    deadline: date = Field(description="Delivery date. Today or later.", examples=["2026-12-01"])
+    deadline: date = Field(
+        description="Delivery date. Today or later, in the business time zone (APP_TIMEZONE).",
+        examples=["2026-12-01"],
+    )
     notes: str | None = Field(default=None, max_length=2000, examples=["Daylight recordings only."])
 
     @field_validator("task_name")
@@ -135,8 +140,12 @@ class RequestCreate(BaseModel):
     @field_validator("deadline")
     @classmethod
     def deadline_not_in_past(cls, value: date) -> date:
-        """Reject a deadline before today's date in UTC."""
-        if value < datetime.now(UTC).date():
+        """Reject a deadline before today's date in the business time zone.
+
+        Using UTC would reject a same-day deadline between midnight and 02:00
+        in Kigali, where the business runs.
+        """
+        if value < datetime.now(config.APP_TIMEZONE).date():
             raise ValueError("deadline is in the past")
         return value
 
@@ -155,14 +164,21 @@ class StatusChangeIn(BaseModel):
 
 
 class StatusChangeOut(BaseModel):
-    """One entry in a request's status history."""
+    """One entry in a request's status history.
 
-    model_config = ConfigDict(from_attributes=True)
+    Clients see who made a change only by role, apart from their own changes.
+    Staff names and internal user ids are never shown to clients.
+    """
 
     from_status: RequestStatus | None = Field(examples=["submitted"])
     to_status: RequestStatus = Field(examples=["in_progress"])
-    changed_by_id: int = Field(examples=[2])
-    changed_by_name: str = Field(examples=["Olu Operator"])
+    changed_by_role: Role = Field(
+        description="Role of the user at the time of the change.", examples=["operator"]
+    )
+    changed_by_name: str | None = Field(
+        description="Name of the user. Null for clients viewing a change made by staff.",
+        examples=["Olu Operator"],
+    )
     changed_at: datetime
 
 

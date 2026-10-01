@@ -13,7 +13,7 @@ from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
 from app.models import DatasetRequest, StatusHistory, User
-from app.schemas import RequestCreate
+from app.schemas import RequestCreate, RequestDetail, RequestOut, StatusChangeOut
 from app.services.errors import ConflictError, NotFoundError, PermissionDeniedError
 
 STAFF = frozenset({"operator", "admin"})
@@ -158,7 +158,29 @@ def record_change(
         from_status=from_status,
         to_status=to_status,
         changed_by_id=user.id,
+        changed_by_role=user.role,
     )
+
+
+def request_detail(request: DatasetRequest, viewer: User) -> RequestDetail:
+    """Build the detail view of a request for this viewer.
+
+    Staff see the name of everyone in the history. Clients see names only for
+    their own changes, and the role alone for changes made by staff.
+    """
+    history = [
+        StatusChangeOut(
+            from_status=change.from_status,
+            to_status=change.to_status,
+            changed_by_role=change.changed_by_role,
+            changed_by_name=change.changed_by.name
+            if viewer.role != "client" or change.changed_by_id == viewer.id
+            else None,
+            changed_at=change.changed_at,
+        )
+        for change in request.history
+    ]
+    return RequestDetail(**RequestOut.model_validate(request).model_dump(), history=history)
 
 
 def not_allowed_message(from_status: str, to_status: str) -> str:

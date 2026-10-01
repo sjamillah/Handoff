@@ -45,9 +45,12 @@ def list_requests(
 
 
 @router.get("/{request_id}", response_model=RequestDetail, responses={404: {"model": ErrorOut}})
-def get_request(request_id: int, db: DbSession, user: CurrentUser) -> DatasetRequest:
-    """Return one request with its status history."""
-    return requests.get_request(db, user, request_id)
+def get_request(request_id: int, db: DbSession, user: CurrentUser) -> RequestDetail:
+    """Return one request with its status history.
+
+    Clients see staff changes by role only, without names.
+    """
+    return requests.request_detail(requests.get_request(db, user, request_id), user)
 
 
 @router.post(
@@ -57,11 +60,12 @@ def get_request(request_id: int, db: DbSession, user: CurrentUser) -> DatasetReq
 )
 def change_status(
     request_id: int, body: StatusChangeIn, db: DbSession, user: CurrentUser
-) -> DatasetRequest:
+) -> RequestDetail:
     """Move a request to another status.
 
     Allowed changes: submitted to in_progress, in_progress to delivered and
     rejected to in_progress by operators and admins; delivered to accepted or
     rejected by the client who owns the request. Any other change returns 409.
     """
-    return requests.change_status(db, user, request_id, body.to_status)
+    request = requests.change_status(db, user, request_id, body.to_status)
+    return requests.request_detail(request, user)
