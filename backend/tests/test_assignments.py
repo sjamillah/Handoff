@@ -79,6 +79,27 @@ def test_concurrent_assignments_of_one_episode_leave_one_winner(started, make_ep
     assert all(count == 1 for _, count in per_episode)
 
 
+@pytest.mark.parametrize("status", ["submitted", "delivered"])
+def test_episodes_can_only_be_assigned_while_in_progress(
+    operator, make_request, make_episodes, db, status
+):
+    request_id = make_request()
+    set_status(db, request_id, status)
+    response = assign(operator, request_id, make_episodes())
+    assert response.status_code == 409
+    assert assignment_count(db) == 0
+
+
+def test_episodes_cannot_be_unassigned_after_delivery(operator, started, make_episodes, db):
+    request_id = started()
+    (episode_id,) = make_episodes()
+    assign_directly(db, request_id, [episode_id])
+    set_status(db, request_id, "delivered")
+    response = operator.delete(f"/requests/{request_id}/assignments/{episode_id}")
+    assert response.status_code == 409
+    assert assignment_count(db) == 1
+
+
 def test_delivery_is_refused_when_fewer_episodes_assigned_than_requested(
     operator, started, make_episodes, db
 ):

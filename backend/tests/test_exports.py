@@ -1,13 +1,13 @@
-"""Export jobs: claiming, retries, lease expiry, idempotent completion and job creation."""
+"""Export jobs: claiming, retries, lease expiry, completion, job creation and delivery."""
 
 import pytest
 from sqlalchemy import func, select, text
 
 from app import config
 from app.db import SessionLocal
-from app.models import ExportJob
+from app.models import DatasetRequest, ExportJob
 from app.services.exports import CLAIM, claim_next_job, finish_job, run_export
-from tests.conftest import set_status
+from tests.conftest import set_status, status_of
 
 
 @pytest.fixture(autouse=True)
@@ -122,3 +122,20 @@ def test_assigning_creates_one_job_and_a_refused_duplicate_creates_none(
         == 409
     )
     assert db.scalar(select(func.count(ExportJob.id))) == 1
+
+
+def test_delivery_waits_until_every_export_has_succeeded(operator, queue_jobs, db):
+    queue_jobs()
+    request_id = db.scalar(select(DatasetRequest.id))
+
+    def deliver():
+        return operator.post(f"/requests/{request_id}/transitions", json={"to_status": "delivered"})
+
+    response = deliver()
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Cannot deliver: 1 episode export has not succeeded yet"
+    assert status_of(db, request_id) == "in_progress"
+
+    assert finish(claim()) == "succeeded"
+    assert deliver().status_code == 200
+    assert status_of(db, request_id) == "delivered"
