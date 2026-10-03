@@ -1,9 +1,40 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import { api, errorMessage, type DatasetRequest, type EpisodePage } from "../api";
+import { api, errorMessage, type DatasetRequest, type EpisodePage, type ExportList } from "../api";
 import { formatDay } from "../format";
 import { Alert, Band, Button, Ring, StatusBadge } from "../ui";
+
+const POLL_MS = 2000;
+
+/**
+ * Export status of the request's episodes, refreshed every two seconds until the
+ * server reports that every export has finished. Changing ``version`` starts it again.
+ */
+function useExports(id: number, version: number): ExportList | null {
+  const [list, setList] = useState<ExportList | null>(null);
+  useEffect(() => {
+    let stopped = false;
+    let timer = 0;
+    const load = () =>
+      api.exports(id).then(
+        (data) => {
+          if (stopped) return;
+          setList(data);
+          if (!data.finished) timer = window.setTimeout(load, POLL_MS);
+        },
+        () => {
+          if (!stopped) timer = window.setTimeout(load, POLL_MS);
+        },
+      );
+    load();
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+  }, [id, version]);
+  return list;
+}
 
 /** Pick episodes for one request by task and quality, then assign them. The server checks every rule. */
 export function Assign() {
@@ -14,6 +45,8 @@ export function Assign() {
   const [selected, setSelected] = useState<string[]>([]);
   const [result, setResult] = useState<{ error: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [version, setVersion] = useState(0);
+  const exports = useExports(id, version);
   const fail = (caught: unknown) => setResult({ error: true, text: errorMessage(caught) });
 
   useEffect(() => {
@@ -47,10 +80,20 @@ export function Assign() {
       setSelected([]);
       setRequest(await api.request(id));
       setFilters((current) => current && { ...current });
+      setVersion((n) => n + 1);
     } catch (caught) {
       fail(caught);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function retry(episodeId: string) {
+    try {
+      await api.retryExport(id, episodeId);
+      setVersion((n) => n + 1);
+    } catch (caught) {
+      fail(caught);
     }
   }
 
@@ -75,6 +118,51 @@ export function Assign() {
           </section>
         )}
         {request && !request.can_assign && <Alert>This request does not take assignments in its current status.</Alert>}
+        {exports && exports.jobs.length > 0 && (
+          <section className="panel exports" aria-label="Exports">
+            <h2>
+              Exports
+              <span className="muted">{exports.finished ? " · finished" : " · updating every 2 seconds"}</span>
+            </h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Episode</th>
+                  <th>Export</th>
+                  <th>Attempts</th>
+                  <th>
+                    <span className="visually-hidden">Details</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {exports.jobs.map((job) => (
+                  <tr key={job.episode_id}>
+                    <td className="mono">{job.episode_id}</td>
+                    <td>
+                      <span className={`export export--${job.status}`}>{job.status}</span>
+                    </td>
+                    <td>
+                      {job.attempts}/{job.max_attempts}
+                    </td>
+                    <td>
+                      <div className="actions">
+                        {job.status === "failed" && (
+                          <>
+                            <span className="field__error">{job.last_error}</span>
+                            <Button variant="plain" onClick={() => retry(job.episode_id)}>
+                              Retry
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
         {filters && (
           <form className="filters" onSubmit={applyFilters}>
             <label>

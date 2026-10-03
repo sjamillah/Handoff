@@ -5,9 +5,11 @@ import type { Role } from "./api";
 import { AuthProvider, useAuth } from "./auth";
 import { Assign } from "./pages/Assign";
 import { ClientRequests } from "./pages/ClientRequests";
+import { Import } from "./pages/Import";
 import { Login } from "./pages/Login";
 import { NewRequest } from "./pages/NewRequest";
 import { OperatorRequests } from "./pages/OperatorRequests";
+import { Users } from "./pages/Users";
 import { Button } from "./ui";
 
 /**
@@ -36,6 +38,8 @@ function Shell() {
             Requests
           </NavLink>
           {user?.role === "client" && <NavLink to="/requests/new">New request</NavLink>}
+          {user?.role !== "client" && <NavLink to="/import">Import</NavLink>}
+          {user?.role === "admin" && <NavLink to="/users">Users</NavLink>}
         </nav>
         <span className="topbar__user">
           {user?.name} <span className="muted">· {user?.role}</span>
@@ -69,6 +73,8 @@ export function App() {
           >
             <Route index element={<Home />} />
             <Route path="/requests/new" element={<Gate roles={["client"]}>{<NewRequest />}</Gate>} />
+            <Route path="/import" element={<Gate roles={["operator", "admin"]}>{<Import />}</Gate>} />
+            <Route path="/users" element={<Gate roles={["admin"]}>{<Users />}</Gate>} />
             <Route
               path="/requests/:requestId/assign"
               element={<Gate roles={["operator", "admin"]}>{<Assign />}</Gate>}

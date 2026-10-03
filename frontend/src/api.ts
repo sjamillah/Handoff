@@ -6,9 +6,11 @@ export type Quality = "good" | "usable" | "bad";
 
 export interface User {
   id: number;
+  email: string;
   name: string;
   role: Role;
   organisation_name: string | null;
+  is_active: boolean;
 }
 
 export interface DatasetRequest {
@@ -38,6 +40,34 @@ export interface EpisodePage {
   total: number;
 }
 
+export interface ExportJob {
+  episode_id: string;
+  status: "pending" | "running" | "succeeded" | "failed";
+  attempts: number;
+  max_attempts: number;
+  last_error: string | null;
+}
+
+export interface ExportList {
+  jobs: ExportJob[];
+  finished: boolean;
+}
+
+export interface ImportRow {
+  line: number;
+  episode_id: string | null;
+  outcome: "duplicate" | "conflict" | "rejected";
+  reason: string;
+}
+
+export interface ImportReport {
+  imported: number;
+  duplicates: number;
+  conflicts: number;
+  rejected: number;
+  rows: ImportRow[];
+}
+
 export const UNAUTHORIZED = "handoff:unauthorized";
 
 /** Error from the API, with its message and any per-field validation messages. */
@@ -50,12 +80,16 @@ export class ApiError extends Error {
   }
 }
 
-/** Send a JSON request. A 401 on anything but login tells the app the session has ended. */
+/**
+ * Send a request with a JSON body, or a file as multipart form data. A 401 on
+ * anything but login tells the app the session has ended.
+ */
 async function request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
+  const upload = body instanceof FormData;
   const response = await fetch(`/api${path}`, {
     method,
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    headers: body === undefined || upload ? undefined : { "Content-Type": "application/json" },
+    body: body === undefined || upload ? (body as FormData | undefined) : JSON.stringify(body),
   });
   if (response.status === 401 && path !== "/auth/login") {
     window.dispatchEvent(new Event(UNAUTHORIZED));
@@ -95,6 +129,20 @@ export const api = {
     request<EpisodePage>(
       `/episodes?${new URLSearchParams({ assignable: "true", limit: "100", task_name: taskName, ...(quality && { quality }) })}`,
     ),
+  exports: (id: number) => request<ExportList>(`/requests/${id}/exports`),
+  retryExport: (id: number, episodeId: string) =>
+    request<null>(`/requests/${id}/exports/${encodeURIComponent(episodeId)}/retry`, "POST"),
+  importCsv: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return request<ImportReport>("/episodes/import", "POST", form);
+  },
+  users: () => request<User[]>("/admin/users"),
+  organisations: () => request<string[]>("/admin/organisations"),
+  createUser: (body: object) => request<User>("/admin/users", "POST", body),
+  deactivateUser: (id: number) => request<User>(`/admin/users/${id}/deactivate`, "POST"),
+  changeRole: (id: number, role: Role, organisation: string | null) =>
+    request<User>(`/admin/users/${id}/role`, "PUT", { role, organisation }),
   assign: (id: number, episodeIds: string[]) =>
     request<{ assigned: string[]; assigned_count: number }>(`/requests/${id}/assignments`, "POST", {
       episode_ids: episodeIds,

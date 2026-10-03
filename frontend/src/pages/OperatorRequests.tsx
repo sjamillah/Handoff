@@ -59,13 +59,15 @@ export function OperatorRequests() {
                     <td>
                       <StatusBadge status={request.status} />
                     </td>
-                    <td className="actions">
-                      {request.can_assign && (
-                        <Link to={`/requests/${request.id}/assign`} className="button button--plain">
-                          Assign
-                        </Link>
-                      )}
-                      <Moves request={request} busy={busy} onMove={(to) => move(request.id, to)} />
+                    <td>
+                      <div className="actions">
+                        {request.can_assign && (
+                          <Link to={`/requests/${request.id}/assign`} className="button button--plain">
+                            Assign
+                          </Link>
+                        )}
+                        <Moves request={request} busy={busy} onMove={(to) => move(request.id, to)} />
+                      </div>
                     </td>
                   </tr>
                 ))}
