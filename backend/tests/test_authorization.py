@@ -5,7 +5,7 @@ import uuid
 import pytest
 
 from app.main import app
-from tests.conftest import login, set_status, status_of
+from tests.conftest import login, set_status, status_of, user_id
 
 PUBLIC_PATHS = {"/auth/login", "/health"}
 PROTECTED_ROUTES = sorted(
@@ -128,3 +128,11 @@ def test_client_sees_only_the_actions_the_server_allows(client_a, make_request, 
     listed = {r["id"]: r for r in client_a.get("/requests").json()}[request_id]
     assert sorted(listed["available_transitions"]) == ["accepted", "rejected"]
     assert listed["can_assign"] is False
+
+
+def test_admin_cannot_deactivate_themselves_or_change_their_own_role(admin, db):
+    admin_id = user_id(db, "admin@example.com")
+    assert admin.post(f"/admin/users/{admin_id}/deactivate").status_code == 400
+    assert admin.put(f"/admin/users/{admin_id}/role", json={"role": "operator"}).status_code == 400
+    me = admin.get("/auth/me").json()
+    assert (me["role"], me["is_active"]) == ("admin", True)

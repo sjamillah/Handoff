@@ -68,3 +68,38 @@ def test_each_change_writes_a_history_row_with_user_and_time(operator, make_requ
     assert rows[1].changed_by_id == user_id(db, "ops1@example.com")
     assert rows[1].changed_by_role == "operator"
     assert before - timedelta(seconds=5) <= rows[1].changed_at <= datetime.now(UTC)
+
+
+def test_clients_see_staff_changes_by_role_only(client_a, operator, make_request):
+    request_id = make_request()
+    operator.post(f"/requests/{request_id}/transitions", json={"to_status": "in_progress"})
+
+    seen_by_client = client_a.get(f"/requests/{request_id}").json()["history"]
+    assert [entry["changed_by_role"] for entry in seen_by_client] == ["client", "operator"]
+    assert seen_by_client[0]["changed_by_name"] is not None
+    assert seen_by_client[1]["changed_by_name"] is None
+
+    seen_by_staff = operator.get(f"/requests/{request_id}").json()["history"]
+    assert seen_by_staff[1]["changed_by_name"] is not None
+
+
+class HalfPastMidnightInKigali(datetime):
+    """``datetime`` whose ``now`` is 00:30 on 5 October in Kigali, still 4 October in UTC."""
+
+    @classmethod
+    def now(cls, tz=None):
+        """Return the fixed instant, in ``tz``."""
+        return datetime(2026, 10, 4, 22, 30, tzinfo=UTC).astimezone(tz)
+
+
+def test_deadlines_are_judged_by_the_date_in_kigali(client_a, monkeypatch):
+    monkeypatch.setattr("app.schemas.requests.datetime", HalfPastMidnightInKigali)
+
+    def create(deadline):
+        return client_a.post(
+            "/requests",
+            json={"task_name": "pick cup", "episodes_requested": 1, "deadline": deadline},
+        )
+
+    assert create("2026-10-04").status_code == 422
+    assert create("2026-10-05").status_code == 201
