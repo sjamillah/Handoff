@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-extend-exclude = ["migrations/versions"]
+extend-exclude = ["migrations/versions", "bench/generate_episodes.py"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "UP", "SIM", "D", "ANN"]
