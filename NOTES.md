@@ -120,6 +120,6 @@ were my own answers to its questions, such as requests belonging to a person
 and keeping Swagger public. It drafted the code, tests and documentation,
 these notes included. The work was checked by running it: tests against real
 PostgreSQL, mutation testing (breaking a rule on purpose to see a test fail),
-and starting from a clean copy. That is how the weak queue test in section 3
+starting from a clean copy, and CI on every push. That is how the weak queue test in section 3
 came out. I also turned down output I did not want, such as a generic first
 UI, which I replaced with my own palette.
