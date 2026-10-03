@@ -1,6 +1,7 @@
 """Episode endpoints for operators and admins."""
 
 import io
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, UploadFile
 
@@ -37,8 +38,8 @@ def list_episodes(
     quality: Quality | None = None,
     request_id: int | None = None,
     assignable: bool = False,
-    limit: int = Query(default=50, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> EpisodePage:
     """List episodes, newest recording first, with filters and pagination.
 
