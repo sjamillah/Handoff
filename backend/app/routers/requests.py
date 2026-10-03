@@ -15,13 +15,14 @@ from app.schemas import (
     AssignmentIn,
     AssignmentOut,
     ErrorOut,
+    ExportListOut,
     RequestCreate,
     RequestDetail,
     RequestOut,
     RequestStatus,
     StatusChangeIn,
 )
-from app.services import assignments, request_views, requests
+from app.services import assignments, export_status, request_views, requests
 
 router = APIRouter(
     prefix="/requests",
@@ -100,3 +101,23 @@ def assign_episodes(
 def unassign_episode(request_id: int, episode_id: str, db: DbSession, user: StaffUser) -> None:
     """Remove an episode from an in_progress request. Operators and admins only."""
     assignments.unassign_episode(db, user, request_id, episode_id)
+
+
+@router.get(
+    "/{request_id}/exports",
+    response_model=ExportListOut,
+    responses={403: {"model": ErrorOut}, 404: {"model": ErrorOut}},
+)
+def list_exports(request_id: int, db: DbSession, user: StaffUser) -> ExportListOut:
+    """Export status of every assigned episode. ``finished`` tells a poller when to stop."""
+    return export_status.list_exports(db, user, request_id)
+
+
+@router.post(
+    "/{request_id}/exports/{episode_id}/retry",
+    status_code=204,
+    responses={403: {"model": ErrorOut}, 404: {"model": ErrorOut}, 409: {"model": ErrorOut}},
+)
+def retry_export(request_id: int, episode_id: str, db: DbSession, user: StaffUser) -> None:
+    """Send a failed export back to the queue with a fresh set of attempts."""
+    export_status.retry_export(db, user, request_id, episode_id)

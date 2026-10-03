@@ -6,6 +6,7 @@ Every model is re-exported here, so callers import from ``app.schemas``.
 from app.schemas.analytics import AnalyticsOut, DailyRobotCount, StatusCount, TaskCount
 from app.schemas.common import ErrorOut, Quality, RequestStatus, Role
 from app.schemas.episodes import AssignmentIn, AssignmentOut, EpisodeOut, EpisodePage
+from app.schemas.exports import ExportJobOut, ExportListOut, ExportStatus
 from app.schemas.imports import ImportOutcome, ImportReport, ImportRowResult
 from app.schemas.requests import (
     RequestCreate,
@@ -23,6 +24,9 @@ __all__ = [
     "DailyRobotCount",
     "EpisodeOut",
     "EpisodePage",
+    "ExportJobOut",
+    "ExportListOut",
+    "ExportStatus",
     "ErrorOut",
     "ImportOutcome",
     "ImportReport",
