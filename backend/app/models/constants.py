@@ -11,6 +11,7 @@ QUALITIES = ("good", "usable", "bad")
 REQUEST_STATUSES = ("submitted", "in_progress", "delivered", "accepted", "rejected")
 KNOWN_ROBOTS = ("arm-01", "arm-02", "arm-03", "mobile-01", "humanoid-01")
 ASSIGNABLE_REQUEST_STATUSES = ("in_progress",)
+EXPORT_STATUSES = ("pending", "running", "succeeded", "failed")
 
 
 def sql_in(column: str, values: Iterable[str]) -> str:

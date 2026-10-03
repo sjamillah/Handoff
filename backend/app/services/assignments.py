@@ -13,7 +13,8 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Assignment, Episode, User
+from app import config
+from app.models import Assignment, Episode, ExportJob, User
 from app.models.constants import ASSIGNABLE_REQUEST_STATUSES as ASSIGNABLE_STATUSES
 from app.normalise import normalise_episode_id
 from app.schemas import AssignmentOut
@@ -33,7 +34,9 @@ def assign_episodes(
     every episode is good or usable, no episode is already assigned, and the
     request is in a status that accepts assignments. The UNIQUE constraint on
     ``assignments.episode_id`` is the final guard against a concurrent
-    assignment of the same episode.
+    assignment of the same episode. Each assignment gets its export job in the
+    same transaction, so there is never an assignment without a job or a job
+    without an assignment.
 
     Args:
         db: Database session.
@@ -69,7 +72,11 @@ def assign_episodes(
         for episode in episodes.values()
     ]
     try:
-        db.execute(insert(Assignment).values(rows))
+        assignment_ids = db.scalars(insert(Assignment).values(rows).returning(Assignment.id)).all()
+        jobs = [
+            {"assignment_id": i, "max_attempts": config.EXPORT_MAX_ATTEMPTS} for i in assignment_ids
+        ]
+        db.execute(insert(ExportJob).values(jobs))
         db.commit()
     except IntegrityError as exc:
         db.rollback()

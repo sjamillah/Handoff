@@ -8,6 +8,12 @@ Attributes:
     SESSION_MAX_AGE_SECONDS: Lifetime of a session in seconds.
     ALLOWED_ORIGINS: Origins allowed to send state-changing requests, comma
         separated. Requests from any other Origin are refused (CSRF protection).
+    EXPORT_MAX_ATTEMPTS: Attempts an export job gets before it is marked failed.
+    EXPORT_FAILURE_RATE: Share of simulated exports that fail, from 0 to 1.
+    EXPORT_MIN_SECONDS, EXPORT_MAX_SECONDS: Range of the simulated export duration.
+    EXPORT_LEASE_SECONDS: How long a worker owns a running job before another may take it.
+    EXPORT_BACKOFF_SECONDS: Delay before the first retry; it doubles on each further retry.
+    EXPORT_POLL_SECONDS: How long an idle worker waits before looking for jobs again.
     APP_TIMEZONE: Time zone of the business, used to decide what "today" is for
         deadlines. Defaults to Africa/Kigali.
 """
@@ -32,3 +38,11 @@ ALLOWED_ORIGINS = frozenset(
     ).split(",")
     if origin.strip()
 )
+
+EXPORT_MAX_ATTEMPTS = int(os.environ.get("EXPORT_MAX_ATTEMPTS", "5"))
+EXPORT_FAILURE_RATE = float(os.environ.get("EXPORT_FAILURE_RATE", "0.2"))
+EXPORT_MIN_SECONDS = float(os.environ.get("EXPORT_MIN_SECONDS", "2"))
+EXPORT_MAX_SECONDS = float(os.environ.get("EXPORT_MAX_SECONDS", "5"))
+EXPORT_LEASE_SECONDS = float(os.environ.get("EXPORT_LEASE_SECONDS", "30"))
+EXPORT_BACKOFF_SECONDS = float(os.environ.get("EXPORT_BACKOFF_SECONDS", "2"))
+EXPORT_POLL_SECONDS = float(os.environ.get("EXPORT_POLL_SECONDS", "1"))
