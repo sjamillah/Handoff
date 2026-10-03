@@ -14,7 +14,9 @@ services:
       retries: 20
 
   api:
-    build: .
+    build:
+      context: .
+      target: runtime
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-handoff}:${POSTGRES_PASSWORD:-handoff}@db:5432/${POSTGRES_DB:-handoff}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin123}
@@ -33,6 +35,22 @@ services:
       && python -m app.seed
       && python -m app.import_episodes seed/episodes.csv
       && uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log"
+
+  tests:
+    profiles: ["test"]
+    build:
+      context: .
+      target: dev
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-handoff}:${POSTGRES_PASSWORD:-handoff}@db:5432/handoff_test
+      SEED_ADMIN_PASSWORD: admin123
+      SEED_OPERATOR_PASSWORD: ops123
+      SEED_CLIENT_PASSWORD: client123
+      APP_TIMEZONE: Africa/Kigali
+    depends_on:
+      db:
+        condition: service_healthy
+    command: pytest
 
 volumes:
   pgdata:
