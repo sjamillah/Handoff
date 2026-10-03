@@ -23,7 +23,8 @@ def get_current_user(request: Request, db: DbSession) -> User:
     """Return the active user that owns the session cookie.
 
     The user is loaded from the database on every request, so deactivation
-    and role changes apply to existing sessions immediately.
+    and role changes apply to existing sessions immediately. The id is also put
+    on ``request.state`` for the request log.
 
     Raises:
         HTTPException: 401 if there is no session, or the user does not exist
@@ -34,6 +35,7 @@ def get_current_user(request: Request, db: DbSession) -> User:
     if user is None or not user.is_active:
         request.session.clear()
         raise HTTPException(status_code=401, detail="Not authenticated")
+    request.state.user_id = user.id
     return user
 
 

@@ -14,7 +14,8 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app import config
 from app.deps import get_current_user
-from app.routers import admin, auth, demo, episodes, health, requests
+from app.request_logging import configure_logging, log_requests
+from app.routers import admin, analytics, auth, demo, episodes, health, requests
 from app.services.errors import ConflictError, NotFoundError, PermissionDeniedError, RuleError
 
 DESCRIPTION = """
@@ -25,6 +26,7 @@ Authentication uses a session cookie, set by `POST /auth/login`. Browsers send
 the cookie automatically on later requests, including requests made from this page.
 """
 
+configure_logging()
 app = FastAPI(title="Handoff", version="0.1.0", description=DESCRIPTION)
 
 app.add_middleware(
@@ -35,10 +37,19 @@ app.add_middleware(
     https_only=config.SESSION_HTTPS_ONLY,
 )
 
+app.middleware("http")(log_requests)
+
 app.include_router(health.router)
 app.include_router(auth.public_router)
 
-for router in (auth.router, admin.router, episodes.router, requests.router, demo.router):
+for router in (
+    auth.router,
+    admin.router,
+    episodes.router,
+    requests.router,
+    analytics.router,
+    demo.router,
+):
     app.include_router(router, dependencies=[Depends(get_current_user)])
 
 

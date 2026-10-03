@@ -27,6 +27,7 @@ def login(body: LoginIn, request: Request, db: DbSession) -> User:
         raise HTTPException(status_code=401, detail="Invalid email or password")
     request.session.clear()
     request.session["user_id"] = user.id
+    request.state.user_id = user.id
     return user
 
 
