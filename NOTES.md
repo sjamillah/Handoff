@@ -57,6 +57,6 @@ What worries me most:
 
 ## 6. AI tooling
 
-I used Claude Code for the whole build. At each step I had it lay out the options and trade-offs first, and then I decided. Some choices were my own answers to its questions, like requests belonging to a person and keeping Swagger public. It drafted the code, the tests and the documentation, including these notes.
+I used Claude Code for the whole build. At each step I had it lay out the options and trade-offs first, and then I decided. Some choices were my own answers to its questions, like requests belonging to a person and keeping Swagger public. It drafted the code, the tests and the documentation.
 
-The work was checked by running it: tests against real PostgreSQL, mutation testing (breaking a rule on purpose to see if a test fails), starting from a clean copy, and CI on every push. That's how the weak queue test in section 3 was found. I also rejected output I didn't want, like a generic first UI, which I replaced with my own palette.
+The work was checked by running it: tests against real PostgreSQL, mutation testing (breaking a rule on purpose to see if a test fails), starting from a clean copy, and CI on every push. Mutation testing is how the weak queue test in section 3 was found, and I ran one myself: taking the export check out of delivery made `test_delivery_waits_until_every_export_has_succeeded` fail with a 200 instead of a 409. I also rejected output I didn't want, like a generic first UI, which I replaced with my own palette.
