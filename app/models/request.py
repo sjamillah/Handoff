@@ -3,10 +3,11 @@
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text, func, select
+from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.db import Base
+from app.models.assignment import Assignment
 from app.models.constants import REQUEST_STATUSES, sql_in
 
 if TYPE_CHECKING:
@@ -37,3 +38,10 @@ class DatasetRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     history: Mapped[list["StatusHistory"]] = relationship(order_by="StatusHistory.id")
+
+    assigned_count: Mapped[int] = column_property(
+        select(func.count(Assignment.id))
+        .where(Assignment.request_id == id)
+        .correlate_except(Assignment)
+        .scalar_subquery()
+    )
