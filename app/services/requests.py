@@ -9,10 +9,10 @@ the request row locked so that two changes cannot run at the same time.
 from collections.abc import Callable
 from typing import NamedTuple
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
-from app.models import DatasetRequest, StatusHistory, User
+from app.models import Assignment, DatasetRequest, StatusHistory, User
 from app.schemas import RequestCreate, RequestDetail, RequestOut, StatusChangeOut
 from app.services.errors import ConflictError, NotFoundError, PermissionDeniedError
 
@@ -195,12 +195,22 @@ def not_allowed_message(from_status: str, to_status: str) -> str:
 
 
 def ensure_enough_episodes_assigned(db: Session, request: DatasetRequest) -> None:
-    """Entry check for ``delivered``: the request needs enough assigned episodes.
+    """Entry check for ``delivered``: enough episodes must be assigned.
 
-    Not enforced yet. Assignments do not exist, so this check always passes.
-    Once they do, it must count the episodes assigned to the request and raise
-    ConflictError when the count is below ``episodes_requested``.
+    Runs inside the status change transaction, after the request row is locked.
+    Assignment changes take the same lock, so the count cannot change between
+    this check and the commit.
+
+    Raises:
+        ConflictError: Fewer episodes are assigned than ``episodes_requested``.
     """
+    assigned = db.scalar(
+        select(func.count(Assignment.id)).where(Assignment.request_id == request.id)
+    )
+    if assigned < request.episodes_requested:
+        raise ConflictError(
+            f"Cannot deliver: {assigned} of {request.episodes_requested} episodes assigned"
+        )
 
 
 ENTRY_CHECKS: dict[str, Callable[[Session, DatasetRequest], None]] = {
