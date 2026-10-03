@@ -19,6 +19,18 @@ router = APIRouter(
 )
 
 
+@router.get("/users", response_model=list[UserOut])
+def list_users(db: DbSession) -> list[User]:
+    """List every user, active ones first."""
+    return users.list_users(db)
+
+
+@router.get("/organisations", response_model=list[str])
+def list_organisations(db: DbSession) -> list[str]:
+    """Names of the organisations a client can belong to."""
+    return users.list_organisation_names(db)
+
+
 @router.post(
     "/users",
     response_model=UserOut,

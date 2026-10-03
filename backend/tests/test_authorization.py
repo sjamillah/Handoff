@@ -69,6 +69,8 @@ def test_client_cannot_import_episodes(client_a):
             "/admin/users",
             {"email": "x@example.com", "name": "X", "password": "password1", "role": "operator"},
         ),
+        ("GET", "/admin/users", None),
+        ("GET", "/admin/organisations", None),
         ("POST", "/admin/users/4/deactivate", None),
         ("PUT", "/admin/users/4/role", {"role": "operator"}),
     ],

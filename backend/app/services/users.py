@@ -56,6 +56,16 @@ def find_organisation_id(db: Session, name: str | None) -> int | None:
     return organisation_id
 
 
+def list_users(db: Session) -> list[User]:
+    """Return every user, active ones first, then by role and email."""
+    return list(db.scalars(select(User).order_by(User.is_active.desc(), User.role, User.email)))
+
+
+def list_organisation_names(db: Session) -> list[str]:
+    """Return the names of every organisation, alphabetically."""
+    return list(db.scalars(select(Organisation.name).order_by(Organisation.name)))
+
+
 def get_user(db: Session, user_id: int) -> User:
     """Return the user with the given id.
 
