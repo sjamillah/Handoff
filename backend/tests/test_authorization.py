@@ -94,6 +94,14 @@ def test_inactive_user_loses_an_existing_session(admin):
     assert session.get("/episodes").status_code == 401
 
 
+def test_oversized_password_is_refused_before_hashing(anon):
+    response = anon.post(
+        "/auth/login", json={"email": "admin@example.com", "password": "x" * 100_000}
+    )
+    assert response.status_code == 422
+    assert "x" * 20 not in response.text
+
+
 def create_operator(admin):
     """Create an operator with a unique email through the admin API and return id and email."""
     email = f"op-{uuid.uuid4().hex[:8]}@example.com"

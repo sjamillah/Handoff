@@ -8,10 +8,14 @@ from app.schemas.common import Role
 
 
 class LoginIn(BaseModel):
-    """Login credentials. The email is matched case-insensitively."""
+    """Login credentials. The email is matched case-insensitively.
 
-    email: str = Field(examples=["user@example.com"])
-    password: str = Field(examples=["your-password"])
+    Both fields are capped so that an oversized password is refused before it
+    reaches the deliberately slow password hash.
+    """
+
+    email: str = Field(max_length=255, examples=["user@example.com"])
+    password: str = Field(max_length=128, examples=["your-password"])
 
 
 class RoleWithOrganisation(BaseModel):
