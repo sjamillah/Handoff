@@ -12,6 +12,8 @@ from fastapi import APIRouter, Depends
 from app.deps import CurrentUser, DbSession, require_roles
 from app.models import DatasetRequest, User
 from app.schemas import (
+    AssignmentIn,
+    AssignmentOut,
     ErrorOut,
     RequestCreate,
     RequestDetail,
@@ -19,7 +21,7 @@ from app.schemas import (
     RequestStatus,
     StatusChangeIn,
 )
-from app.services import requests
+from app.services import assignments, requests
 
 router = APIRouter(
     prefix="/requests",
@@ -28,6 +30,7 @@ router = APIRouter(
 )
 
 ClientUser = Annotated[User, Depends(require_roles("client"))]
+StaffUser = Annotated[User, Depends(require_roles("operator", "admin"))]
 
 
 @router.post("", response_model=RequestOut, status_code=201, responses={403: {"model": ErrorOut}})
@@ -69,3 +72,30 @@ def change_status(
     """
     request = requests.change_status(db, user, request_id, body.to_status)
     return requests.request_detail(request, user)
+
+
+@router.post(
+    "/{request_id}/assignments",
+    response_model=AssignmentOut,
+    status_code=201,
+    responses={403: {"model": ErrorOut}, 404: {"model": ErrorOut}, 409: {"model": ErrorOut}},
+)
+def assign_episodes(
+    request_id: int, body: AssignmentIn, db: DbSession, user: StaffUser
+) -> AssignmentOut:
+    """Assign episodes to an in_progress request. Operators and admins only.
+
+    All or nothing: if any episode is missing, has bad quality or is already
+    assigned, nothing is assigned and the error lists every failing episode.
+    """
+    return assignments.assign_episodes(db, user, request_id, body.episode_ids)
+
+
+@router.delete(
+    "/{request_id}/assignments/{episode_id}",
+    status_code=204,
+    responses={403: {"model": ErrorOut}, 404: {"model": ErrorOut}, 409: {"model": ErrorOut}},
+)
+def unassign_episode(request_id: int, episode_id: str, db: DbSession, user: StaffUser) -> None:
+    """Remove an episode from an in_progress request. Operators and admins only."""
+    assignments.unassign_episode(db, user, request_id, episode_id)
