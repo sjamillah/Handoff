@@ -15,7 +15,7 @@ services:
 
   api:
     build:
-      context: .
+      context: ./backend
       target: runtime
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-handoff}:${POSTGRES_PASSWORD:-handoff}@db:5432/${POSTGRES_DB:-handoff}
@@ -39,7 +39,7 @@ services:
   tests:
     profiles: ["test"]
     build:
-      context: .
+      context: ./backend
       target: dev
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-handoff}:${POSTGRES_PASSWORD:-handoff}@db:5432/handoff_test
