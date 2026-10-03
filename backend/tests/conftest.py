@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from app.db import SessionLocal, engine
 from app.main import app
-from app.models import Assignment, DatasetRequest, Episode, User
+from app.models import Assignment, DatasetRequest, Episode, ExportJob, User
 from app.seed import seed
 
 TEST_URL = make_url(os.environ["DATABASE_URL"])
@@ -162,11 +162,16 @@ def set_status(db: Session, request_id: int, status: str) -> None:
 
 
 def assign_directly(db: Session, request_id: int, episode_ids: list[str]) -> None:
-    """Assign episodes by inserting rows directly, to set up a test."""
+    """Assign episodes by inserting rows directly, each with an already exported job."""
     operator_id = user_id(db, "ops1@example.com")
     for episode_id in episode_ids:
         episode = db.scalar(select(Episode).where(Episode.episode_id == episode_id))
-        db.add(Assignment(episode_id=episode.id, request_id=request_id, assigned_by_id=operator_id))
+        assignment = Assignment(
+            episode_id=episode.id, request_id=request_id, assigned_by_id=operator_id
+        )
+        db.add(assignment)
+        db.flush()
+        db.add(ExportJob(assignment_id=assignment.id, max_attempts=5, status="succeeded"))
     db.commit()
 
 

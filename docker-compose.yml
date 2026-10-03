@@ -25,6 +25,7 @@ services:
       SESSION_SECRET: ${SESSION_SECRET:-}
       SESSION_HTTPS_ONLY: ${SESSION_HTTPS_ONLY:-false}
       APP_TIMEZONE: ${APP_TIMEZONE:-Africa/Kigali}
+      EXPORT_MAX_ATTEMPTS: ${EXPORT_MAX_ATTEMPTS:-5}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:${WEB_PORT:-3000},http://127.0.0.1:${WEB_PORT:-3000},http://localhost:${API_PORT:-8000},http://127.0.0.1:${API_PORT:-8000}}
     depends_on:
       db:
@@ -42,6 +43,23 @@ services:
       && python -m app.seed
       && python -m app.import_episodes seed/episodes.csv
       && uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log"
+
+  worker:
+    build:
+      context: ./backend
+      target: runtime
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-handoff}:${POSTGRES_PASSWORD:-handoff}@db:5432/${POSTGRES_DB:-handoff}
+      EXPORT_MAX_ATTEMPTS: ${EXPORT_MAX_ATTEMPTS:-5}
+      EXPORT_FAILURE_RATE: ${EXPORT_FAILURE_RATE:-0.2}
+      EXPORT_MIN_SECONDS: ${EXPORT_MIN_SECONDS:-2}
+      EXPORT_MAX_SECONDS: ${EXPORT_MAX_SECONDS:-5}
+      EXPORT_LEASE_SECONDS: ${EXPORT_LEASE_SECONDS:-30}
+    depends_on:
+      api:
+        condition: service_healthy
+    command: python -m app.worker
+    stop_grace_period: 15s
 
   web:
     build: ./frontend

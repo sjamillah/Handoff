@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.models import Assignment, DatasetRequest, StatusHistory, User
 from app.schemas import RequestCreate
 from app.services.errors import ConflictError, NotFoundError, PermissionDeniedError
+from app.services.exports import ensure_exports_succeeded
 
 STAFF = frozenset({"operator", "admin"})
 CLIENT = frozenset({"client"})
@@ -139,8 +140,7 @@ def change_status(db: Session, user: User, request_id: int, to_status: str) -> D
         raise PermissionDeniedError(
             f"Only {roles} users can move a request from {from_status} to {to_status}"
         )
-    entry_check = ENTRY_CHECKS.get(to_status)
-    if entry_check:
+    for entry_check in ENTRY_CHECKS.get(to_status, ()):
         entry_check(db, request)
     request.status = to_status
     db.add(record_change(request, from_status, to_status, user))
@@ -197,6 +197,6 @@ def ensure_enough_episodes_assigned(db: Session, request: DatasetRequest) -> Non
         )
 
 
-ENTRY_CHECKS: dict[str, Callable[[Session, DatasetRequest], None]] = {
-    "delivered": ensure_enough_episodes_assigned,
+ENTRY_CHECKS: dict[str, tuple[Callable[[Session, DatasetRequest], None], ...]] = {
+    "delivered": (ensure_enough_episodes_assigned, ensure_exports_succeeded),
 }
