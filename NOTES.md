@@ -1,8 +1,6 @@
 # Notes
 
-How to run it is in the [README](README.md). **Stretch item:** background work.
-Each assigned episode goes through a simulated export job, run by a separate
-worker with safe retries, and the assignment page shows each export's status.
+The README has the run instructions. For the stretch item I did background work. Every assigned episode goes through a simulated export job. A separate worker runs the jobs and retries failures safely, and the assignment page shows the status of each export.
 
 ## 1. Design
 
@@ -14,112 +12,51 @@ organisations 1──* users 1──* requests 1──* status_history *──1 
                                             1──1 export_jobs
 ```
 
-Clients, and only clients, belong to an organisation (a CHECK). Requests belong
-to the client who created them; every status change adds a `status_history` row
-with the user, their role at the time, and when. A unique constraint on
-`assignments.episode_id` keeps an episode in at most one request.
+Only clients belong to an organisation, and a CHECK enforces that. A request belongs to the client who created it. Every status change adds a row to `status_history` with who did it, their role at the time, and when. A unique constraint on `assignments.episode_id` means an episode can be in only one request.
 
-All state is in PostgreSQL, including the export queue. The session is a signed
-cookie holding only the user id, and the user is reloaded on every request, so a
-deactivation applies at once. If `SESSION_SECRET` is not set, each API process
-picks a random one, so a restart logs everyone out.
+Everything lives in PostgreSQL, the export queue too. The session is a signed cookie that holds just the user id. I reload the user on every request, so deactivating someone takes effect straight away. If `SESSION_SECRET` isn't set, each API process makes up its own, so a restart logs everyone out.
 
 **Hardest decisions**
 
-1. **Concurrent changes to one request.** Delivering while someone unassigns an
-   episode could leave a delivered request short. Every status change,
-   assignment and unassignment takes a row lock on the request
-   (`get_request(..., lock=True)`). A version column with retries would also
-   work, but every assign and unassign would have to bump it and every caller
-   would need retry logic. With about two operators per request, waiting on the
-   lock costs almost nothing, and the "enough episodes" rule is checked while
-   nobody else can change the request.
-2. **Duplicates in the import.** A repeated episode id with the same values is a
-   duplicate; with different values it is a conflict. Both are skipped and
-   reported. Line 168 repeats `EP-00011` from line 3 as `good` instead of `bad`;
-   the file cannot say which is right, so the first valid copy is kept, stored
-   episodes are never overwritten, and the report shows both values.
-3. **Delivery and exports.** The brief does not link them. I read an export as
-   extracting the episode's content into the client's dataset (here it is
-   simulated), so delivery is refused until every export has succeeded. A failed export can be retried by hand.
+1. **Two people changing one request at once.** If someone delivers while someone else unassigns an episode, the delivered request could end up short. So every status change, assign and unassign locks the request row first (`get_request(..., lock=True)`). I could have used a version column with retries, but then every assign and unassign has to bump it and every caller needs retry logic. There are about two operators per request, so waiting on a lock costs almost nothing. It also means the "enough episodes" check runs while nobody else can touch the request.
+2. **Duplicates in the import.** The same episode id with the same values is a duplicate. The same id with different values is a conflict. I skip both and report them. Line 168 repeats `EP-00011` from line 3, but says `good` instead of `bad`. The file can't tell me which one is right, so I keep the first valid copy and never overwrite what's stored. The report shows both values.
+3. **Delivery and exports.** The brief doesn't connect them. I treated an export as pulling the episode's content into the client's dataset (it's simulated here), so a request can't be delivered until every export has succeeded. A failed export can be retried by hand.
 
-**Import rules.** Sample file: 189 rows, 171 imported, 2 duplicates, 2
-conflicts, 14 rejected. Fields are trimmed; ids, robots, tasks and quality are
-case-normalised. Rows are
-rejected for blank fields, an unknown robot (`arm-99`), invalid quality
-(`excellent`), wrong column count, a bad duration (`45.5`, `-5`, `999999`), or an
-unreadable or future date. Dates are ISO 8601 or `dd/mm/yyyy HH:MM` (day first);
-no time zone means UTC. The file is one transaction.
+**Import rules.** On the sample file: 189 rows, 171 imported, 2 duplicates, 2 conflicts, 14 rejected. I trim every field and normalise case on ids, robots, tasks and quality. A row is rejected if a field is blank, the robot is unknown (`arm-99`), the quality is invalid (`excellent`), the column count is wrong, the duration is bad (`45.5`, `-5`, `999999`), or the date can't be read or is in the future. Dates are ISO 8601 or `dd/mm/yyyy HH:MM`, day first. No time zone means UTC. The whole file runs in one transaction.
 
-**Other decisions.** Another client's request returns 404, not 403. Clients see
-staff changes by role, not name. Episodes are assigned only while a request is
-in progress, and more than requested is allowed. A rejected request keeps its
-assignments for rework. Deadlines and analytics days use Kigali time; the median
-runs from submission to first delivery. An admin cannot deactivate themselves
-or change their own role.
+**Other decisions.** Another client's request gives a 404, not a 403. Clients see staff changes by role, not by name. Episodes can only be assigned while a request is in progress, and assigning more than requested is allowed. A rejected request keeps its assignments for the rework. Deadlines and analytics days use Kigali time. The median runs from submission to first delivery. An admin can't deactivate themselves or change their own role.
 
 ## 2. Left out, and the next two days
 
-Left out: an analytics page, password reset, reactivating users, creating
-organisations, request-list pagination, login throttling, and a way to correct a
-stored episode. Next, in order: login throttling and revocable sessions;
-pagination; Playwright tests of the three journeys (client creates a request,
-operator assigns and delivers, client accepts or rejects); deployment, with the
-frontend on Vercel or Netlify rewriting `/api` to a backend host not chosen yet;
-an analytics page for operators and admins.
+Left out: an analytics page, password reset, reactivating users, creating organisations, pagination on the request list, login throttling, and a way to correct a stored episode.
+
+With two more days I'd go in this order: login throttling and revocable sessions, pagination, Playwright tests for three journeys (client creates a request, operator assigns and delivers, client accepts or rejects), deployment, then an analytics page for operators and admins. For deployment the frontend would go on Vercel or Netlify, rewriting `/api` to a backend host I haven't picked yet.
 
 ## 3. Something that went wrong
 
-The first export queue test passed even with `SKIP LOCKED` removed. Mutation
-testing showed it: the test checked that two workers never claim the same job,
-but a plain `FOR UPDATE` also guarantees that, because the second worker waits
-for the lock and then skips the job. The difference is only that workers wait
-for each other. The test now holds worker A's lock, gives worker B a two-second
-`lock_timeout`, and requires B to claim a different job; without `SKIP LOCKED`,
-B times out and the test fails.
+My first export queue test passed even with `SKIP LOCKED` removed. Mutation testing caught it. The test checked that two workers never claim the same job, but a plain `FOR UPDATE` guarantees that too. All `SKIP LOCKED` changes is that a worker doesn't wait on a job someone else has locked.
+
+So I rewrote the test. Worker A holds its lock, worker B gets a two second `lock_timeout`, and B has to claim a different job. Without `SKIP LOCKED`, B times out and the test fails.
 
 ## 4. Security
 
-Passwords are hashed with argon2id, and an unknown email is checked against a
-dummy hash so timing does not reveal accounts. The session cookie is signed,
-HttpOnly and `SameSite=Lax`, lasts 8 hours, and nothing is in `localStorage`.
-State-changing requests from an `Origin` outside `ALLOWED_ORIGINS` are refused.
-Apart from login, `/health` and the API docs, every endpoint needs a session
-and its access rules are checked on the server; a test checks that each of
-those routes refuses a request without a session. Pydantic limits
-input (notes up to 2000 characters, passwords up to 128), CHECK constraints back
-it up, and validation errors never echo the input. nginx caps uploads at 20 MB.
+Passwords are hashed with argon2id. If the email doesn't exist, I still check against a dummy hash, so the response time doesn't show which accounts exist. The session cookie is signed, HttpOnly and `SameSite=Lax`, and lasts 8 hours. Nothing goes in `localStorage`. A state-changing request from an `Origin` that isn't in `ALLOWED_ORIGINS` is refused.
+
+Apart from login, `/health` and the API docs, every endpoint needs a session, and the access rules are checked on the server. A test makes sure each of those routes refuses a request with no session. Pydantic limits the input (notes up to 2000 characters, passwords up to 128) and CHECK constraints back that up. Validation errors don't echo the input back. nginx caps uploads at 20 MB.
 
 What worries me most:
 
-1. **A client seeing another client's data.** Every lookup goes through
-   `visible_requests`, and tests cover reading and changing another client's
-   request, but a new endpoint that skips it would leak.
-2. **Stolen or guessed credentials.** There is no login throttling, and a stolen
-   cookie stays valid up to 8 hours, since logout only clears the browser's copy.
+1. **A client seeing another client's data.** Every lookup goes through `visible_requests`, and tests cover reading and changing another client's request. But a new endpoint that skips it would leak.
+2. **Stolen or guessed credentials.** There's no login throttling, and a stolen cookie stays valid for up to 8 hours, because logout only clears the browser's copy.
 
 ## 5. Scale
 
-**10× users** (about 300, from roughly 30): the unpaginated request list breaks
-first, then the single API process with 15 database connections, where slow
-argon2 logins queue. Fix: pagination, several API processes with a shared
-`SESSION_SECRET`, PgBouncer.
+**10× users.** I'm assuming about 30 users today, so 300. The request list isn't paginated, and that breaks first. Next is the single API process with 15 database connections, where slow argon2 logins start to queue. I'd add pagination, run several API processes with the same `SESSION_SECRET`, and put PgBouncer in front.
 
-**100× episodes:** analytics read only the chosen range through covering
-indexes, but very wide ranges would scan most of the table; a daily rollup
-table or monthly partitions would fix that. The import holds every valid row in
-memory in one transaction; I would `COPY` into a staging table and check in SQL
-as a background job. I would move the episode list from offset to keyset
-pagination, and archive finished export jobs after 12 months.
+**100× episodes.** The episode analytics only read the date range you ask for, using indexes, but a very wide range would scan most of the table. A daily rollup table or monthly partitions would fix that. The import keeps every valid row in memory in one transaction. I'd `COPY` into a staging table and check the rows in SQL as a background job. The episode list should move from offset to keyset pagination. Finished export jobs I'd archive after 12 months.
 
 ## 6. AI tooling
 
-I used Claude Code throughout. Before each step I had it set out the options
-and trade-offs, then decided; often I took its recommendation, and some choices
-were my own answers to its questions, such as requests belonging to a person
-and keeping Swagger public. It drafted the code, tests and documentation,
-these notes included. The work was checked by running it: tests against real
-PostgreSQL, mutation testing (breaking a rule on purpose to see a test fail),
-starting from a clean copy, and CI on every push. That is how the weak queue test in section 3
-came out. I also turned down output I did not want, such as a generic first
-UI, which I replaced with my own palette.
+I used Claude Code for the whole build. At each step I had it lay out the options and trade-offs first, and then I decided. Some choices were my own answers to its questions, like requests belonging to a person and keeping Swagger public. It drafted the code, the tests and the documentation, including these notes.
+
+The work was checked by running it: tests against real PostgreSQL, mutation testing (breaking a rule on purpose to see if a test fails), starting from a clean copy, and CI on every push. That's how the weak queue test in section 3 was found. I also rejected output I didn't want, like a generic first UI, which I replaced with my own palette.
