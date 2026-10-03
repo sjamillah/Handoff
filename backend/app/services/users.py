@@ -5,8 +5,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Organisation, User
+from app.normalise import normalise_email
 from app.schemas import RoleChange, UserCreate
-from app.security import DUMMY_HASH, hash_password, normalise_email, verify_password
+from app.security import DUMMY_HASH, hash_password, verify_password
 from app.services.errors import ConflictError, NotFoundError, RuleError, violated_constraint
 
 EMAIL_UNIQUE_CONSTRAINT = "uq_users_email"

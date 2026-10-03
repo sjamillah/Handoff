@@ -12,6 +12,7 @@ from app.models.constants import REQUEST_STATUSES, sql_in
 
 if TYPE_CHECKING:
     from app.models.status_history import StatusHistory
+    from app.models.user import User
 
 
 class DatasetRequest(Base):
@@ -38,6 +39,7 @@ class DatasetRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     history: Mapped[list["StatusHistory"]] = relationship(order_by="StatusHistory.id")
+    client: Mapped["User"] = relationship()
 
     assigned_count: Mapped[int] = column_property(
         select(func.count(Assignment.id))

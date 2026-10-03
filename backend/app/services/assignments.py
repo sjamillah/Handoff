@@ -14,12 +14,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Assignment, Episode, User
+from app.models.constants import ASSIGNABLE_REQUEST_STATUSES as ASSIGNABLE_STATUSES
+from app.normalise import normalise_episode_id
 from app.schemas import AssignmentOut
 from app.services.episodes import ASSIGNABLE_QUALITIES
 from app.services.errors import ConflictError, NotFoundError, violated_constraint
 from app.services.requests import get_request
 
-ASSIGNABLE_STATUSES = ("in_progress",)
 EPISODE_UNIQUE_CONSTRAINT = "uq_assignments_episode_id"
 
 
@@ -94,7 +95,9 @@ def unassign_episode(db: Session, user: User, request_id: int, episode_id: str) 
         ConflictError: The request is not in_progress.
     """
     request = get_request(db, user, request_id, lock=True)
-    episode = db.scalar(select(Episode).where(Episode.episode_id == episode_id.strip().upper()))
+    episode = db.scalar(
+        select(Episode).where(Episode.episode_id == normalise_episode_id(episode_id))
+    )
     assignment = None
     if episode:
         assignment = db.scalar(

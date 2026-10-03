@@ -1,4 +1,4 @@
-"""Password hashing and email normalisation.
+"""Password hashing.
 
 ``DUMMY_HASH`` is verified against when a login email does not exist, so
 that the response time matches a wrong password.
@@ -41,8 +41,3 @@ def verify_password(password_hash: str, password: str) -> bool:
         return _hasher.verify(password_hash, password)
     except VerifyMismatchError:
         return False
-
-
-def normalise_email(email: str) -> str:
-    """Return the email trimmed and lowercased, the form in which emails are stored."""
-    return email.strip().lower()

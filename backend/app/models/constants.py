@@ -1,4 +1,8 @@
-"""Allowed values for roles, episode quality, request status and robots."""
+"""Allowed values for roles, episode quality, request status and robots.
+
+``ASSIGNABLE_REQUEST_STATUSES`` lists the statuses in which episodes can be
+assigned to or removed from a request.
+"""
 
 from collections.abc import Iterable
 
@@ -6,6 +10,7 @@ ROLES = ("client", "operator", "admin")
 QUALITIES = ("good", "usable", "bad")
 REQUEST_STATUSES = ("submitted", "in_progress", "delivered", "accepted", "rejected")
 KNOWN_ROBOTS = ("arm-01", "arm-02", "arm-03", "mobile-01", "humanoid-01")
+ASSIGNABLE_REQUEST_STATUSES = ("in_progress",)
 
 
 def sql_in(column: str, values: Iterable[str]) -> str:

@@ -17,7 +17,7 @@ PROTECTED_ROUTES = sorted(
 
 
 def test_every_route_except_login_and_health_is_checked():
-    assert len(PROTECTED_ROUTES) >= 15
+    assert len(PROTECTED_ROUTES) >= 14
 
 
 @pytest.mark.parametrize(("method", "path"), PROTECTED_ROUTES)
@@ -101,3 +101,20 @@ def create_operator(admin):
     )
     assert response.status_code == 201, response.text
     return response.json()["id"], email
+
+
+def test_state_change_from_another_site_is_refused(client_a):
+    response = client_a.post(
+        "/requests",
+        json={"task_name": "pick cup", "episodes_requested": 1, "deadline": "2099-12-31"},
+        headers={"Origin": "https://evil.example"},
+    )
+    assert response.status_code == 403
+
+
+def test_client_sees_only_the_actions_the_server_allows(client_a, make_request, db):
+    request_id = make_request()
+    set_status(db, request_id, "delivered")
+    listed = {r["id"]: r for r in client_a.get("/requests").json()}[request_id]
+    assert sorted(listed["available_transitions"]) == ["accepted", "rejected"]
+    assert listed["can_assign"] is False

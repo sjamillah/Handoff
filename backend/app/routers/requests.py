@@ -10,7 +10,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from app.deps import CurrentUser, DbSession, require_roles
-from app.models import DatasetRequest, User
+from app.models import User
 from app.schemas import (
     AssignmentIn,
     AssignmentOut,
@@ -21,7 +21,7 @@ from app.schemas import (
     RequestStatus,
     StatusChangeIn,
 )
-from app.services import assignments, requests
+from app.services import assignments, request_views, requests
 
 router = APIRouter(
     prefix="/requests",
@@ -34,17 +34,18 @@ StaffUser = Annotated[User, Depends(require_roles("operator", "admin"))]
 
 
 @router.post("", response_model=RequestOut, status_code=201, responses={403: {"model": ErrorOut}})
-def create_request(body: RequestCreate, db: DbSession, client: ClientUser) -> DatasetRequest:
+def create_request(body: RequestCreate, db: DbSession, client: ClientUser) -> RequestOut:
     """Create a request. Clients only. The request starts in ``submitted``."""
-    return requests.create_request(db, client, body)
+    return request_views.request_summary(requests.create_request(db, client, body), client)
 
 
 @router.get("", response_model=list[RequestOut])
 def list_requests(
     db: DbSession, user: CurrentUser, status: RequestStatus | None = None
-) -> list[DatasetRequest]:
+) -> list[RequestOut]:
     """List requests, newest first. Clients get only their own."""
-    return requests.list_requests(db, user, status)
+    visible = requests.list_requests(db, user, status)
+    return [request_views.request_summary(request, user) for request in visible]
 
 
 @router.get("/{request_id}", response_model=RequestDetail, responses={404: {"model": ErrorOut}})
@@ -53,7 +54,7 @@ def get_request(request_id: int, db: DbSession, user: CurrentUser) -> RequestDet
 
     Clients see staff changes by role only, without names.
     """
-    return requests.request_detail(requests.get_request(db, user, request_id), user)
+    return request_views.request_detail(requests.get_request(db, user, request_id), user)
 
 
 @router.post(
@@ -71,7 +72,7 @@ def change_status(
     rejected by the client who owns the request. Any other change returns 409.
     """
     request = requests.change_status(db, user, request_id, body.to_status)
-    return requests.request_detail(request, user)
+    return request_views.request_detail(request, user)
 
 
 @router.post(

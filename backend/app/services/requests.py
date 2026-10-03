@@ -10,10 +10,10 @@ from collections.abc import Callable
 from typing import NamedTuple
 
 from sqlalchemy import Select, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models import Assignment, DatasetRequest, StatusHistory, User
-from app.schemas import RequestCreate, RequestDetail, RequestOut, StatusChangeOut
+from app.schemas import RequestCreate
 from app.services.errors import ConflictError, NotFoundError, PermissionDeniedError
 
 STAFF = frozenset({"operator", "admin"})
@@ -84,7 +84,7 @@ def list_requests(db: Session, user: User, status: str | None = None) -> list[Da
     if status:
         query = query.where(DatasetRequest.status == status)
     query = query.order_by(DatasetRequest.created_at.desc(), DatasetRequest.id.desc())
-    return list(db.scalars(query))
+    return list(db.scalars(query.options(selectinload(DatasetRequest.client))))
 
 
 def get_request(db: Session, user: User, request_id: int, lock: bool = False) -> DatasetRequest:
@@ -162,25 +162,9 @@ def record_change(
     )
 
 
-def request_detail(request: DatasetRequest, viewer: User) -> RequestDetail:
-    """Build the detail view of a request for this viewer.
-
-    Staff see the name of everyone in the history. Clients see names only for
-    their own changes, and the role alone for changes made by staff.
-    """
-    history = [
-        StatusChangeOut(
-            from_status=change.from_status,
-            to_status=change.to_status,
-            changed_by_role=change.changed_by_role,
-            changed_by_name=change.changed_by.name
-            if viewer.role != "client" or change.changed_by_id == viewer.id
-            else None,
-            changed_at=change.changed_at,
-        )
-        for change in request.history
-    ]
-    return RequestDetail(**RequestOut.model_validate(request).model_dump(), history=history)
+def available_transitions(status: str, role: str) -> list[str]:
+    """Return the statuses a user with this role may move a request to from ``status``."""
+    return [t.to_status for t in TRANSITIONS if t.from_status == status and role in t.roles]
 
 
 def not_allowed_message(from_status: str, to_status: str) -> str:

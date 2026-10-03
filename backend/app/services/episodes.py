@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Assignment, Episode
+from app.normalise import normalise_task_name
 from app.schemas import EpisodeOut, EpisodePage
 
 ASSIGNABLE_QUALITIES = ("good", "usable")
@@ -35,7 +36,7 @@ def list_episodes(
         Assignment, Assignment.episode_id == Episode.id
     )
     if task_name:
-        query = query.where(Episode.task_name == task_name.strip().lower())
+        query = query.where(Episode.task_name == normalise_task_name(task_name))
     if quality:
         query = query.where(Episode.quality == quality)
     if request_id is not None:

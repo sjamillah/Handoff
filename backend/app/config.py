@@ -6,6 +6,8 @@ Attributes:
         generated at startup, which invalidates all sessions on restart.
     SESSION_HTTPS_ONLY: Restricts the session cookie to HTTPS when true.
     SESSION_MAX_AGE_SECONDS: Lifetime of a session in seconds.
+    ALLOWED_ORIGINS: Origins allowed to send state-changing requests, comma
+        separated. Requests from any other Origin are refused (CSRF protection).
     APP_TIMEZONE: Time zone of the business, used to decide what "today" is for
         deadlines. Defaults to Africa/Kigali.
 """
@@ -21,3 +23,11 @@ SESSION_HTTPS_ONLY = os.environ.get("SESSION_HTTPS_ONLY", "false").lower() == "t
 SESSION_MAX_AGE_SECONDS = 8 * 60 * 60
 
 APP_TIMEZONE = ZoneInfo(os.environ.get("APP_TIMEZONE", "Africa/Kigali"))
+
+ALLOWED_ORIGINS = frozenset(
+    origin.strip()
+    for origin in os.environ.get(
+        "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8000"
+    ).split(",")
+    if origin.strip()
+)

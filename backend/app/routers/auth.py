@@ -6,7 +6,7 @@ included with authentication, like every other router.
 
 from fastapi import APIRouter, HTTPException, Request
 
-from app.deps import DbSession
+from app.deps import CurrentUser, DbSession
 from app.models import User
 from app.schemas import ErrorOut, LoginIn, UserOut
 from app.services.users import authenticate
@@ -35,3 +35,9 @@ def login(body: LoginIn, request: Request, db: DbSession) -> User:
 def logout(request: Request) -> None:
     """Log out by clearing the session cookie."""
     request.session.clear()
+
+
+@router.get("/me", response_model=UserOut)
+def me(user: CurrentUser) -> User:
+    """Return the logged-in user, so a client app can restore its state after a reload."""
+    return user

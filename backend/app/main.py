@@ -13,9 +13,10 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import config
+from app.csrf import check_origin
 from app.deps import get_current_user
 from app.request_logging import configure_logging, log_requests
-from app.routers import admin, analytics, auth, demo, episodes, health, requests
+from app.routers import admin, analytics, auth, episodes, health, requests
 from app.services.errors import ConflictError, NotFoundError, PermissionDeniedError, RuleError
 
 DESCRIPTION = """
@@ -37,6 +38,7 @@ app.add_middleware(
     https_only=config.SESSION_HTTPS_ONLY,
 )
 
+app.middleware("http")(check_origin)
 app.middleware("http")(log_requests)
 
 app.include_router(health.router)
@@ -48,7 +50,6 @@ for router in (
     episodes.router,
     requests.router,
     analytics.router,
-    demo.router,
 ):
     app.include_router(router, dependencies=[Depends(get_current_user)])
 

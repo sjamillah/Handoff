@@ -25,6 +25,7 @@ services:
       SESSION_SECRET: ${SESSION_SECRET:-}
       SESSION_HTTPS_ONLY: ${SESSION_HTTPS_ONLY:-false}
       APP_TIMEZONE: ${APP_TIMEZONE:-Africa/Kigali}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8000}
     depends_on:
       db:
         condition: service_healthy
