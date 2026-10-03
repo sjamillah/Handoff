@@ -27,7 +27,8 @@ APP_TIMEZONE = ZoneInfo(os.environ.get("APP_TIMEZONE", "Africa/Kigali"))
 ALLOWED_ORIGINS = frozenset(
     origin.strip()
     for origin in os.environ.get(
-        "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8000"
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000",
     ).split(",")
     if origin.strip()
 )
