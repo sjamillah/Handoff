@@ -1,7 +1,8 @@
 """Database engine, session factory and declarative base.
 
 Connections use the UTC time zone, so timestamps are returned in UTC
-regardless of the server configuration.
+regardless of the server configuration. A connection attempt gives up after
+5 seconds, so the health check reports a lost database instead of hanging.
 """
 
 from sqlalchemy import MetaData, create_engine
@@ -28,5 +29,7 @@ class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
-engine = create_engine(DATABASE_URL, connect_args={"options": "-c timezone=utc"})
+engine = create_engine(
+    DATABASE_URL, connect_args={"options": "-c timezone=utc", "connect_timeout": 5}
+)
 SessionLocal = sessionmaker(bind=engine)
