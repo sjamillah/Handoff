@@ -181,7 +181,7 @@ Everything has a working default. To change something, copy `.env.example` to
 └── frontend/
     ├── src/
     │   ├── api.ts            API types and calls
-    │   ├── pages/            login, client requests, new request, operator requests, assign
+    │   ├── pages/            one per screen: login, requests, assign, import, users
     │   ├── ui.tsx            shared components
     │   └── styles.css
     └── nginx.conf            serves the app and forwards /api to the backend
