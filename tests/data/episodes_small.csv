@@ -1,0 +1,14 @@
+episode_id,robot_id,task_name,recorded_at,duration_seconds,operator_name,quality
+EP-T001,arm-01,pick cup,2026-08-01T10:00:00,30,Aline,good
+EP-T002, ARM-02 ,  Fold Towel ,02/08/2026 09:15,45,Eric,USABLE
+EP-T001,arm-01,pick cup,2026-08-01T10:00:00,30,Aline,good
+ep-t002,arm-02,fold towel,2026-08-02T09:15:00Z,45,Eric,bad
+,arm-01,pick cup,2026-08-03T10:00:00,30,Aline,good
+EP-T003,arm-99,pick cup,2026-08-03T10:00:00,30,Aline,good
+EP-T004,arm-01,pick cup,2026-08-03T10:00:00,30,Aline,excellent
+EP-T005,arm-01,pick cup,2026-08-03T10:00:00,4.5,Aline,good
+EP-T006,arm-01,pick cup,not a date,30,Aline,good
+EP-T007,arm-01,pick cup,2099-01-01T00:00:00,30,Aline,good
+EP-T008,arm-01,pick cup,2026-08-03T10:00:00,30
+EP-T009,arm-01,"pick cup, then place",2026-08-03T10:00:00,30,,good
+
