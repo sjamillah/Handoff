@@ -753,31 +753,49 @@ tbody tr:last-child td {
   max-width: 520px;
 }
 
-.art text {
-  fill: #b08f7c;
-  font-size: 2.6px;
-  font-family: ui-monospace, Consolas, monospace;
-}
-
-.art line {
-  stroke: rgb(255 255 255 / 0.1);
+.track {
+  stroke: rgb(255 255 255 / 0.08);
   stroke-width: 0.3;
 }
 
-.clip--0 {
-  fill: var(--rust);
+.track-dot {
+  fill: #6b4a3c;
 }
 
-.clip--1 {
+.track-dot--live {
   fill: var(--orange);
 }
 
-.clip--2 {
+.clip--recorded.clip--tone0 {
+  fill: var(--rust);
+}
+
+.clip--recorded.clip--tone1 {
   fill: var(--oxblood);
 }
 
-.clip--3 {
+.clip--recorded.clip--tone2 {
   fill: var(--garnet);
+}
+
+.clip--live {
+  fill: var(--orange);
+}
+
+.clip--ahead {
+  fill: none;
+  stroke: rgb(243 227 211 / 0.22);
+  stroke-width: 0.3;
+  stroke-dasharray: 1 0.8;
+}
+
+.playhead {
+  stroke: var(--orange);
+  stroke-width: 0.35;
+}
+
+.playhead__knob {
+  fill: var(--orange);
 }
 
 .login__panel {
