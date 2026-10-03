@@ -4,6 +4,8 @@ Services raise these instead of ``HTTPException``, so they can be used and
 tested without HTTP. ``app.main`` maps each one to a status code.
 """
 
+from sqlalchemy.exc import IntegrityError
+
 
 class NotFoundError(Exception):
     """Requested object does not exist or is not visible to the user. Mapped to 404."""
@@ -19,3 +21,9 @@ class ConflictError(Exception):
 
 class RuleError(Exception):
     """Input is valid but breaks a business rule. Mapped to 400."""
+
+
+def violated_constraint(exc: IntegrityError) -> str | None:
+    """Return the name of the constraint PostgreSQL reported as violated, if any."""
+    diag = getattr(exc.orig, "diag", None)
+    return getattr(diag, "constraint_name", None)

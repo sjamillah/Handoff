@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.models import Organisation, User
 from app.schemas import RoleChange, UserCreate
 from app.security import DUMMY_HASH, hash_password, normalise_email, verify_password
-from app.services.errors import ConflictError, NotFoundError, RuleError
+from app.services.errors import ConflictError, NotFoundError, RuleError, violated_constraint
 
 EMAIL_UNIQUE_CONSTRAINT = "uq_users_email"
 
@@ -90,7 +90,7 @@ def create_user(db: Session, data: UserCreate) -> User:
         db.commit()
     except IntegrityError as exc:
         db.rollback()
-        if _constraint_name(exc) == EMAIL_UNIQUE_CONSTRAINT:
+        if violated_constraint(exc) == EMAIL_UNIQUE_CONSTRAINT:
             raise ConflictError("A user with this email already exists") from exc
         raise
     db.refresh(user)
@@ -144,9 +144,3 @@ def change_role(db: Session, user_id: int, data: RoleChange, acting_user: User) 
     user.organisation_id = organisation_id
     db.commit()
     return user
-
-
-def _constraint_name(exc: IntegrityError) -> str | None:
-    """Return the name of the violated constraint reported by PostgreSQL, if any."""
-    diag = getattr(exc.orig, "diag", None)
-    return getattr(diag, "constraint_name", None)
